@@ -1,0 +1,191 @@
+#include <iostream>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <cstdlib>  
+using namespace std;
+
+class Book {
+public:
+    string title, author;
+    int id;
+    bool isAvailable;
+
+    Book(int bookID, string bookTitle, string bookAuthor, bool available = true) {
+        id = bookID;
+        title = bookTitle;
+        author = bookAuthor;
+        isAvailable = available;
+    }
+
+    void displayBook() {
+        cout << "ID: " << id << ", Title: " << title << ", Author: " << author;
+        cout << (isAvailable ? " [Available]" : " [Not Available]") << endl;
+    }
+};
+
+class Library {
+private:
+    vector<Book> books;
+
+public:
+    Library() {
+        loadFromCSV(); 
+    }
+
+    void addBook(int id, string title, string author) {
+        books.push_back(Book(id, title, author));
+        saveToCSV(); 
+    }
+
+    void displayBooks() {
+        if (books.empty()) {
+            cout << "No books available.\n";
+            return;
+        }
+        for (Book &b : books) {
+            b.displayBook();
+        }
+    }
+
+    void searchBook(string query) {
+        bool found = false;
+        for (Book &b : books) {
+            if (b.title.find(query) != string::npos || b.author.find(query) != string::npos) {
+                b.displayBook();
+                found = true;
+            }
+        }
+        if (!found) {
+            cout << "No matching books found.\n";
+        }
+    }
+
+    void borrowBook(int id) {
+        for (Book &b : books) {
+            if (b.id == id) {
+                if (b.isAvailable) {
+                    b.isAvailable = false;
+                    cout << "Book borrowed successfully!\n";
+                    saveToCSV();
+                } else {
+                    cout << "Book is already borrowed.\n";
+                }
+                return;
+            }
+        }
+        cout << "Book not found.\n";
+    }
+
+    void returnBook(int id) {
+        for (Book &b : books) {
+            if (b.id == id) {
+                if (!b.isAvailable) {
+                    b.isAvailable = true;
+                    cout << "Book returned successfully!\n";
+                    saveToCSV();
+                } else {
+                    cout << "Book was not borrowed.\n";
+                }
+                return;
+            }
+        }
+        cout << "Book not found.\n";
+    }
+
+    void saveToCSV() {
+        ofstream file("books.csv");
+        if (!file) {
+            cout << "Error opening file!\n";
+            return;
+        }
+        file << "ID,Title,Author,Available\n"; 
+        for (const auto &book : books) {
+            file << book.id << "," << book.title << "," << book.author << "," << (book.isAvailable ? "1" : "0") << "\n";
+        }
+        file.close();
+    }
+
+    void loadFromCSV() {
+        ifstream file("books.csv");
+        if (!file) {
+            cout << "No existing data found. Starting fresh.\n";
+            return;
+        }
+
+        books.clear(); 
+
+        string line;
+        getline(file, line);
+
+        while (getline(file, line)) {
+            stringstream ss(line);
+            string idStr, title, author, availableStr;
+            
+            getline(ss, idStr, ',');
+            getline(ss, title, ',');
+            getline(ss, author, ',');
+            getline(ss, availableStr, ',');
+
+            if (idStr.empty() || title.empty() || author.empty() || availableStr.empty()) {
+                continue; // Skip invalid lines
+            }
+
+            int id = stoi(idStr);
+            bool available = (availableStr == "1");
+
+            books.push_back(Book(id, title, author, available));
+        }
+        file.close();
+    }
+};
+
+int main() {
+    Library lib;
+    int choice, id;
+    string title, author;
+
+    while (true) {
+        cout << "\nLibrary Management System\n";
+        cout << "1. Add Book\n2. Display Books\n3. Search Book\n4. Borrow Book\n5. Return Book\n6. Exit\n";
+        cout << "Enter choice: ";
+        cin >> choice;
+        cin.ignore();  // Prevent input skipping
+
+        switch (choice) {
+            case 1:
+                cout << "Enter Book ID: ";
+                cin >> id;
+                cin.ignore();
+                cout << "Enter Title: ";
+                getline(cin, title);
+                cout << "Enter Author: ";
+                getline(cin, author);
+                lib.addBook(id, title, author);
+                break;
+            case 2:
+                lib.displayBooks();
+                break;
+            case 3:
+                cout << "Enter title or author to search: ";
+                getline(cin, title);
+                lib.searchBook(title);
+                break;
+            case 4:
+                cout << "Enter Book ID to borrow: ";
+                cin >> id;
+                lib.borrowBook(id);
+                break;
+            case 5:
+                cout << "Enter Book ID to return: ";
+                cin >> id;
+                lib.returnBook(id);
+                break;
+            case 6:
+                cout << "Exiting...\n";
+                return 0;
+            default:
+                cout << "Invalid choice. Try again.\n";
+        }
+    }
+}
